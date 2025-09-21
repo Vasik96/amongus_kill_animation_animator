@@ -894,6 +894,23 @@ namespace amongus_fortegreen
             "WerewolfKill(Clone)"
         };
 
+
+
+        string[] emergencyPaths = new string[]
+        {
+        "KillOverlay/EmergencyAnimation(Clone)",
+        "KillOverlay/AirshipEmergencyAnimation(Clone)",
+        "KillOverlay/FungleEmergencyAnimation(Clone)"
+        };
+
+
+        string[] reportBodyPaths = new string[]
+        {
+        "KillOverlay/ReportBodyAnimation(Clone)",
+        "KillOverlay/AirshipReportBodyAnimation(Clone)",
+        "KillOverlay/FungleReportBodyAnimation(Clone)"
+        };
+
         // Call this to check if a kill animation is running
         private bool IsKillAnimationActive()
         {
@@ -917,17 +934,14 @@ namespace amongus_fortegreen
             var hud = cam.transform.Find("Hud");
             if (hud == null) return false;
 
-            // Check report body animation
-            var reportBodyAnim = hud.Find("KillOverlay/ReportBodyAnimation(Clone)");
-            if (reportBodyAnim != null) return true;
 
-            // List of possible emergency animations
-            string[] emergencyPaths = new string[]
+            // Check if any report body animation exists
+            foreach (string path in reportBodyPaths)
             {
-            "KillOverlay/EmergencyAnimation(Clone)",
-            "KillOverlay/AirshipEmergencyAnimation(Clone)",
-            "KillOverlay/FungleEmergencyAnimation(Clone)"
-            };
+                if (hud.Find(path) != null)
+                    return true;
+            }
+
 
             // Check if any emergency animation exists
             foreach (string path in emergencyPaths)
@@ -938,6 +952,7 @@ namespace amongus_fortegreen
 
             return false;
         }
+
 
 
 
@@ -963,20 +978,19 @@ namespace amongus_fortegreen
                         if (hud != null)
                         {
 
-                            var reportBodyAnim = hud.Find("KillOverlay/ReportBodyAnimation(Clone)");
-                            if (reportBodyAnim != null)
+
+                            foreach (string path in reportBodyPaths)
                             {
-                                reportBodyAnim.gameObject.SetActive(false); // disable immediately
-                                reportAnim = reportBodyAnim;
-                                CacheReportOriginals(reportAnim);
+                                var reportBodyAnim = hud.Find(path);
+                                if (reportBodyAnim != null)
+                                {
+                                    reportBodyAnim.gameObject.SetActive(false); // disable immediately
+                                    reportAnim = reportBodyAnim;
+                                    CacheReportOriginals(reportAnim);
+                                    break; // stop after first found variant
+                                }
                             }
 
-                            string[] emergencyPaths = new string[]
-                            {
-                                "KillOverlay/EmergencyAnimation(Clone)",
-                                "KillOverlay/AirshipEmergencyAnimation(Clone)",
-                                "KillOverlay/FungleEmergencyAnimation(Clone)"
-                            };
 
                             GameObject emergencyAnim = null;
 
