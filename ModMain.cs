@@ -12,6 +12,7 @@ using Il2CppInterop.Runtime.Injection;
 using Il2CppSystem.Collections;
 using InnerNet;
 using Rewired;
+using Sentry.Internal;
 using Sentry.Internal.Extensions;
 using System;
 using System.Collections.Generic;
@@ -108,6 +109,8 @@ namespace amongus_fortegreen
         public static bool fix_sabotages = false;
         public static bool instareport_when_killed = false;
 
+        public static bool zoom_enabled = false;
+
         //previous states vars
         private bool prevScannerState = false;
         private bool prevNoclipState = false;
@@ -131,7 +134,7 @@ namespace amongus_fortegreen
         private static float lastVentToggleTime = 0f;
         private static float ventToggleCooldown = 1.0f; // half a second cooldown
 
-        public static bool og_report_behavior = false;
+        public static bool og_report_behavior = true;
 
         public static bool CanToggleVent()
         {
@@ -157,7 +160,7 @@ namespace amongus_fortegreen
         string colorInput = "0";
 
 
-        private Rect windowRect = new Rect(40, 20, 254, 1000);
+        private Rect windowRect = new Rect(40, 20, 254, 1040);
         private Rect impostorWindowRect = new Rect(Screen.width - (250 + 20), 0 + (Screen.height * 0.15f), 250, 150);
 
         public KillOverlayAnimator kill_animator;
@@ -165,6 +168,7 @@ namespace amongus_fortegreen
 
         public bool is_killoverlay_start_pending = false;
         public bool is_meeting_alter_pending = false;
+        public bool waitForMeetingAnimation = false;
 
         void OnGUI()
         {
@@ -227,6 +231,7 @@ namespace amongus_fortegreen
         }
 
 
+
         void DrawMenuWindow(int windowID)
         {
             //GUILayout.Label("<color=#66AACC><b>Among Us Menu</b></color>", new GUIStyle(GUI.skin.label) { fontSize = 14, richText = true, alignment = TextAnchor.MiddleCenter });
@@ -237,6 +242,7 @@ namespace amongus_fortegreen
 
             noclipEnabled = GUILayout.Toggle(noclipEnabled, " Noclip");
             speed_enabled = GUILayout.Toggle(speed_enabled, " Speed");
+            zoom_enabled = GUILayout.Toggle(zoom_enabled, " Zoom");
             fullbright_enabled = GUILayout.Toggle(fullbright_enabled, " Fullbright");
             showImpostors = GUILayout.Toggle(showImpostors, " Show Impostors");
             chatAlways = GUILayout.Toggle(chatAlways, " Show chat");
@@ -251,6 +257,16 @@ namespace amongus_fortegreen
             unfixable_lights = GUILayout.Toggle(unfixable_lights, "Unfixable lights");
             og_report_behavior = GUILayout.Toggle(og_report_behavior, "og call/report behavior");
 
+            GUILayout.Space(3);
+
+            if (GUILayout.Button("Save"))
+            {
+                SavePreferences();
+            }
+            if (GUILayout.Button("Load"))
+            {
+                LoadPreferences();
+            }
 
             GUILayout.Space(15);
 
@@ -372,10 +388,12 @@ namespace amongus_fortegreen
                 {
                     ModMain.LoggerInstance.LogInfo("No body exists");
 
+                    //disabled due to being kicked in the new AU version
+                    
                     // Pick the first alive player as fallback
                     foreach (var player in allPlayers)
                     {
-                        if (player.Data != null && !player.Data.IsDead)
+                        if (player.Data != null && player.Data.IsDead) // pick any dead player, alive players kick u from the game
                         {
                             reportDeadBody(player.Data);
                             break; // just the first alive player, then stop
@@ -510,7 +528,47 @@ namespace amongus_fortegreen
             GUI.DragWindow(new Rect(0, 0, windowRect.width, 20));
         }
 
+        void SavePreferences()
+        {
+            PlayerPrefs.SetInt("noclipEnabled", noclipEnabled ? 1 : 0);
+            PlayerPrefs.SetInt("speed_enabled", speed_enabled ? 1 : 0);
+            PlayerPrefs.SetInt("zoom_enabled", zoom_enabled ? 1 : 0);
+            PlayerPrefs.SetInt("fullbright_enabled", fullbright_enabled ? 1 : 0);
+            PlayerPrefs.SetInt("showImpostors", showImpostors ? 1 : 0);
+            PlayerPrefs.SetInt("chatAlways", chatAlways ? 1 : 0);
+            PlayerPrefs.SetInt("ventAsCrew", ventAsCrew ? 1 : 0);
+            PlayerPrefs.SetInt("walkInVent", walkInVent ? 1 : 0);
+            PlayerPrefs.SetInt("killAnyone", ModVars.killAnyone ? 1 : 0);
+            PlayerPrefs.SetInt("seeGhostChat", seeGhostChat ? 1 : 0);
+            PlayerPrefs.SetInt("infiniteKillReach", ModVars.infiniteKillReach ? 1 : 0);
+            PlayerPrefs.SetInt("instafix_sabotages", instafix_sabotages ? 1 : 0);
+            PlayerPrefs.SetInt("instareport_when_killed", instareport_when_killed ? 1 : 0);
+            PlayerPrefs.SetInt("force_all_doors_closed", force_all_doors_closed ? 1 : 0);
+            PlayerPrefs.SetInt("unfixable_lights", unfixable_lights ? 1 : 0);
+            PlayerPrefs.SetInt("og_report_behavior", og_report_behavior ? 1 : 0);
+            PlayerPrefs.Save();
+        }
 
+        // Load all toggles from PlayerPrefs
+        void LoadPreferences()
+        {
+            noclipEnabled = PlayerPrefs.GetInt("noclipEnabled", 0) == 1;
+            speed_enabled = PlayerPrefs.GetInt("speed_enabled", 0) == 1;
+            zoom_enabled = PlayerPrefs.GetInt("zoom_enabled", 0) == 1;
+            fullbright_enabled = PlayerPrefs.GetInt("fullbright_enabled", 0) == 1;
+            showImpostors = PlayerPrefs.GetInt("showImpostors", 0) == 1;
+            chatAlways = PlayerPrefs.GetInt("chatAlways", 0) == 1;
+            ventAsCrew = PlayerPrefs.GetInt("ventAsCrew", 0) == 1;
+            walkInVent = PlayerPrefs.GetInt("walkInVent", 0) == 1;
+            ModVars.killAnyone = PlayerPrefs.GetInt("killAnyone", 0) == 1;
+            seeGhostChat = PlayerPrefs.GetInt("seeGhostChat", 0) == 1;
+            ModVars.infiniteKillReach = PlayerPrefs.GetInt("infiniteKillReach", 0) == 1;
+            instafix_sabotages = PlayerPrefs.GetInt("instafix_sabotages", 0) == 1;
+            instareport_when_killed = PlayerPrefs.GetInt("instareport_when_killed", 0) == 1;
+            force_all_doors_closed = PlayerPrefs.GetInt("force_all_doors_closed", 0) == 1;
+            unfixable_lights = PlayerPrefs.GetInt("unfixable_lights", 0) == 1;
+            og_report_behavior = PlayerPrefs.GetInt("og_report_behavior", 0) == 1;
+        }
 
 
 
@@ -571,7 +629,7 @@ namespace amongus_fortegreen
             // safety
             if (reportAnimTransform == null)
             {
-                ModMain.LoggerInstance.LogMessage("SpawnReportClones: reportAnimTransform is null");
+                //ModMain.LoggerInstance.LogMessage("SpawnReportClones: reportAnimTransform is null");
                 return;
             }
 
@@ -590,7 +648,7 @@ namespace amongus_fortegreen
                 clonedReportText.SetActive(true);
                 originalReportText.SetActive(false);
 
-                clonedReportText.transform.localPosition = new Vector3(0f, 0f, -136f);
+                clonedReportText.transform.localPosition = new Vector3(0f, -0.2f, -136f);
                 clonedReportText.transform.localRotation = Quaternion.identity;
 
                 ModMain.LoggerInstance.LogMessage($"Cloned Text TMP localPos: {clonedReportText.transform.localPosition}");
@@ -603,15 +661,16 @@ namespace amongus_fortegreen
                 clonedReportStab.SetActive(true);
                 originalReportStab.SetActive(false);
 
-                clonedReportStab.transform.localPosition = new Vector3(0f, 1f, -135f);
                 clonedReportStab.transform.localRotation = Quaternion.identity;
 
                 if (isMeeting)
                 {
+                    clonedReportStab.transform.localPosition = new Vector3(-0.7f, 1.45f, -135f);
                     clonedReportStab.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
                 }
                 else
                 {
+                    clonedReportStab.transform.localPosition = new Vector3(0f, 1f, -135f);
                     clonedReportStab.transform.localScale = Vector3.one;
                 }
 
@@ -650,22 +709,6 @@ namespace amongus_fortegreen
                 clonedReportStab = null;
             }
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -745,6 +788,79 @@ namespace amongus_fortegreen
             kill_animator = null;
         }
 
+
+
+
+
+
+
+
+
+
+        private Transform fullscreenTransform;
+        private SpriteRenderer fullscreenRenderer;
+
+        // Last-known states for logging
+        private bool lastEnabled;
+        private float lastEnabledChangeTime = 0f;
+
+        private void FindFullScreen()
+        {
+            var cam = GameObject.Find("Main Camera");
+            if (cam != null)
+            {
+                var hud = cam.transform.Find("Hud/KillOverlay/FullScreen");
+                if (hud != null)
+                {
+                    fullscreenTransform = hud;
+                    fullscreenRenderer = hud.GetComponent<SpriteRenderer>();
+
+                    if (fullscreenRenderer != null)
+                    {
+                        lastEnabled = fullscreenRenderer.enabled;
+                    }
+                }
+            }
+        }
+
+        public void UpdateFullScreenLogging(float currentTime)
+        {
+            if (fullscreenTransform == null || fullscreenRenderer == null)
+            {
+                FindFullScreen();
+                return;
+            }
+
+            // --- ENABLED STATE ---
+            if (fullscreenRenderer.enabled != lastEnabled)
+            {
+                float delta = currentTime - lastEnabledChangeTime;
+                ModMain.LoggerInstance.LogInfo(
+                    $"[FullScreen] Enabled: {lastEnabled} -> {fullscreenRenderer.enabled} (Δt={delta:F3}s)"
+                );
+                lastEnabled = fullscreenRenderer.enabled;
+                lastEnabledChangeTime = currentTime;
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         public GameObject flameObj;
         public Transform flameTransform;
 
@@ -760,6 +876,55 @@ namespace amongus_fortegreen
         Transform? meetingAnim;
         Transform? reportAnim;
 
+        private static readonly string[] KillAnimations = new string[]
+        {
+            "KillStabAnimation(Clone)",
+            "KillNeckAnimation(Clone)",
+            "KillTongueAnimation(Clone)",
+            "PunchShootKill(Clone)",
+            "KillViperAnimation(Clone)",
+            "KillTongueAnimationSeeker(Clone)",
+            "KillNeckAnimationSeeker(Clone)",
+            "HorseKill(Clone)",
+            "LongKillHorse(Clone)",
+            "LongKill(Clone)",
+            "PunchShootKillSeeker(Clone)",
+            "KillStabAnimationSeeker(Clone)",
+            "RHMKill(Clone)",
+            "WerewolfKill(Clone)"
+        };
+
+        // Call this to check if a kill animation is running
+        private bool IsKillAnimationActive()
+        {
+            var hud = GameObject.Find("Hud")?.transform; // or Main Camera/Hud
+            if (hud == null) return false;
+
+            foreach (var animName in KillAnimations)
+            {
+                var anim = hud.Find($"KillOverlay/{animName}");
+                if (anim != null && anim.gameObject.activeSelf)
+                    return true;
+            }
+            return false;
+        }
+
+        private bool IsReportOrMeetingAnimationActive()
+        {
+            var cam = GameObject.Find("Main Camera");
+            if (cam == null) return false;
+
+            var hud = cam.transform.Find("Hud");
+            if (hud == null) return false;
+
+            var reportBodyAnim = hud.Find("KillOverlay/ReportBodyAnimation(Clone)");
+            var emergencyAnim = hud.Find("KillOverlay/EmergencyAnimation(Clone)");
+
+            return reportBodyAnim != null || emergencyAnim != null;
+        }
+
+        
+
         void Update()
         {
             try
@@ -772,8 +937,52 @@ namespace amongus_fortegreen
                     kill_animator = new KillOverlayAnimator();
                 }
 
+                if (og_report_behavior)
+                {
+                    var cam = GameObject.Find("Main Camera");
+                    if (cam != null)
+                    {
+                        var hud = cam.transform.Find("Hud");
+                        if (hud != null)
+                        {
+
+                            var reportBodyAnim = hud.Find("KillOverlay/ReportBodyAnimation(Clone)");
+                            if (reportBodyAnim != null)
+                            {
+                                reportBodyAnim.gameObject.SetActive(false); // disable immediately
+                                reportAnim = reportBodyAnim;
+                                CacheReportOriginals(reportAnim);
+                            }
+
+                            var emergencyAnim = hud.Find("KillOverlay/EmergencyAnimation(Clone)");
+                            if (emergencyAnim != null)
+                            {
+                                emergencyAnim.gameObject.SetActive(false); // disable immediately
+                                meetingAnim = emergencyAnim;
+                                CacheReportOriginals(meetingAnim);
+                            }
+                        }
+                    }
+                }
+
+
+                if (waitForMeetingAnimation)
+                {
+                    //ModMain.LoggerInstance.LogInfo("checking for meeting animation");
+                    if (IsReportOrMeetingAnimationActive())
+                    {
+                        //ModMain.LoggerInstance.LogInfo("variables set to replace meeting animation");
+                        is_meeting_alter_pending = true;
+                        is_killoverlay_start_pending = true;
+
+                        waitForMeetingAnimation = false; // stop checking
+                    }
+                }
+
+
                 if (is_meeting_alter_pending)
                 {
+
                     // Initialize references if needed
                     if (meetingBackground == null)
                     {
@@ -840,7 +1049,7 @@ namespace amongus_fortegreen
                                 if (meetingHubBg != null)
                                 {
                                     meetingBackground = meetingHubBg.gameObject;
-                                    ModMain.LoggerInstance.LogMessage("meeting appeared, cleaning up clones");
+                                    //ModMain.LoggerInstance.LogMessage("meeting appeared, cleaning up clones");
 
 
                                     // Reset the flag here so next report can spawn clones
@@ -854,7 +1063,7 @@ namespace amongus_fortegreen
                     // Start kill animation if pending
                     if (is_killoverlay_start_pending)
                     {
-                        kill_animator.StartAnimation(2.1f);
+                        kill_animator.StartAnimation(1.9f);
                         is_killoverlay_start_pending = false;
                         DisableOriginalReportObjects();
 
@@ -869,7 +1078,7 @@ namespace amongus_fortegreen
                 if (kill_animator != null)
                     kill_animator.Update();
 
-
+                UpdateFullScreenLogging(Time.time);
 
                 // Debug logging – always see current phase
                 if (kill_animator != null)
@@ -889,7 +1098,7 @@ namespace amongus_fortegreen
                                 isMeeting = false;
 
                             SpawnReportClones(isMeeting);
-                            Debug.Log("Clones spawned at Paused phase");
+                            //Debug.Log("Clones spawned at Paused phase");
                         }
 
                         // Force their positions in case anything drifts
@@ -908,7 +1117,7 @@ namespace amongus_fortegreen
                     {
                         if (clonedReportText != null || clonedReportStab != null)
                         {
-                            ModMain.LoggerInstance.LogMessage("Cleaning up clones (anim finished)...");
+                            //ModMain.LoggerInstance.LogMessage("Cleaning up clones (anim finished)...");
                             CleanupReportClones();
                         }
 
@@ -918,6 +1127,7 @@ namespace amongus_fortegreen
                 }
 
 
+                /*
                 if (flameTransform == null)
                 {
                     var cam = GameObject.Find("Main Camera");
@@ -978,7 +1188,7 @@ namespace amongus_fortegreen
                         lastActiveChangeTime = currentTime;
                     }
                 }
-
+                */
 
 
 
@@ -990,6 +1200,7 @@ namespace amongus_fortegreen
                 }
 
                 HandleZoom();
+
                 HandlePlayerModifiers();
                 if (showImpostors) 
                 {
@@ -1242,6 +1453,9 @@ namespace amongus_fortegreen
 
         private void HandleZoom()
         {
+            if (!zoom_enabled)
+                return;
+
             if (ModVars.ZoomUsed)
             {
                 var camObj = GameObject.Find("Main Camera");
