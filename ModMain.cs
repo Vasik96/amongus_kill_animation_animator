@@ -917,13 +917,30 @@ namespace amongus_fortegreen
             var hud = cam.transform.Find("Hud");
             if (hud == null) return false;
 
+            // Check report body animation
             var reportBodyAnim = hud.Find("KillOverlay/ReportBodyAnimation(Clone)");
-            var emergencyAnim = hud.Find("KillOverlay/EmergencyAnimation(Clone)");
+            if (reportBodyAnim != null) return true;
 
-            return reportBodyAnim != null || emergencyAnim != null;
+            // List of possible emergency animations
+            string[] emergencyPaths = new string[]
+            {
+            "KillOverlay/EmergencyAnimation(Clone)",
+            "KillOverlay/AirshipEmergencyAnimation(Clone)",
+            "KillOverlay/FungleEmergencyAnimation(Clone)"
+            };
+
+            // Check if any emergency animation exists
+            foreach (string path in emergencyPaths)
+            {
+                if (hud.Find(path) != null)
+                    return true;
+            }
+
+            return false;
         }
 
-        
+
+
 
         void Update()
         {
@@ -954,11 +971,30 @@ namespace amongus_fortegreen
                                 CacheReportOriginals(reportAnim);
                             }
 
-                            var emergencyAnim = hud.Find("KillOverlay/EmergencyAnimation(Clone)");
+                            string[] emergencyPaths = new string[]
+                            {
+                                "KillOverlay/EmergencyAnimation(Clone)",
+                                "KillOverlay/AirshipEmergencyAnimation(Clone)",
+                                "KillOverlay/FungleEmergencyAnimation(Clone)"
+                            };
+
+                            GameObject emergencyAnim = null;
+
+                            // Try to find the first one that exists
+                            foreach (string path in emergencyPaths)
+                            {
+                                var anim = hud.Find(path);
+                                if (anim != null)
+                                {
+                                    emergencyAnim = anim.gameObject;
+                                    break; // stop at the first one found
+                                }
+                            }
+
                             if (emergencyAnim != null)
                             {
-                                emergencyAnim.gameObject.SetActive(false); // disable immediately
-                                meetingAnim = emergencyAnim;
+                                emergencyAnim.SetActive(false); // disable immediately
+                                meetingAnim = emergencyAnim.transform;
                                 CacheReportOriginals(meetingAnim);
                             }
                         }
